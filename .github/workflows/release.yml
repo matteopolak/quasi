@@ -75,8 +75,6 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
-      - uses: ikalnytskyi/action-setup-postgres@v4
-        if: matrix.target == 'x86_64-pc-windows-msvc'
       - name: Build in release mode
         uses: actions-rs/cargo@v1
         with:
