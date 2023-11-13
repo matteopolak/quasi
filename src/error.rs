@@ -1,22 +1,43 @@
+use std::{fmt, io};
+
 use crate::{
 	lexer::{Ident, Lit, Token, TokenKind},
 	parser::{expr::ExprOp, TokenStream},
 	span::Span,
 };
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug)]
 pub enum Error {
-	#[error("io error: {0}")]
-	Io(#[from] std::io::Error),
-	#[error("parse error: {source:?} at {span:?}")]
+	Io(io::Error),
 	Parse { source: ParseError, span: Span },
-	#[error("runtime error: {source:?} at {span:?}")]
 	Runtime { source: RuntimeError, span: Span },
-	#[error("lexer error: {source:?} at {span:?}")]
 	Lexer { source: LexerError, span: Span },
 }
 
+impl From<io::Error> for Error {
+	fn from(e: io::Error) -> Self {
+		Self::Io(e)
+	}
+}
+
 impl Error {
+	#[must_use]
+	pub fn format(&self, input: &[u8]) -> String {
+		match self {
+			Self::Io(e) => format!("io error: {e}"),
+			Self::Parse { source, span } => {
+				format!("parse error: {}\n{}", source, span.highlight(input))
+			}
+			Self::Runtime { source, span } => {
+				format!("runtime error: {}\n{}", source, span.highlight(input))
+			}
+			Self::Lexer { source, span } => {
+				format!("lexer error: {}\n{}", source, span.highlight(input))
+			}
+		}
+	}
+
+	#[must_use]
 	pub fn offset(self, offset: usize) -> Self {
 		match self {
 			Self::Parse { source, span } => Self::Parse {
@@ -31,33 +52,62 @@ impl Error {
 				source,
 				span: span.offset(offset),
 			},
-			_ => self,
+			Self::Io(..) => self,
 		}
 	}
 
+	#[must_use]
 	pub fn span(&self) -> &Span {
 		match self {
-			Self::Parse { span, .. } => span,
-			Self::Runtime { span, .. } => span,
-			Self::Lexer { span, .. } => span,
-			_ => unreachable!(),
+			Self::Parse { span, .. } | Self::Runtime { span, .. } | Self::Lexer { span, .. } => {
+				span
+			}
+			Self::Io(..) => unreachable!(),
 		}
 	}
 
+	#[must_use]
 	pub fn tokens(&self, stream: &TokenStream) -> Vec<Token> {
-		stream.tokens(self.span().clone())
+		stream.tokens(self.span())
 	}
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug)]
 pub enum ParseError {
-	#[error("unexpected token: expected {expected:?}, found {found}")]
 	UnexpectedToken {
 		expected: Vec<TokenKind>,
 		found: TokenKind,
 	},
-	#[error("unexpected type: expected {expected}, found {found}")]
-	UnexpectedType { expected: Lit, found: Lit },
+	UnexpectedType {
+		expected: Lit,
+		found: Lit,
+	},
+}
+
+impl fmt::Display for ParseError {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		match self {
+			Self::UnexpectedToken { expected, found } => {
+				if expected.len() == 1 {
+					write!(f, "expected `{}`, found `{}`", expected[0], found)
+				} else {
+					write!(
+						f,
+						"expected one of {}, found `{}`",
+						expected
+							.iter()
+							.map(|t| format!("`{t}`"))
+							.collect::<Vec<_>>()
+							.join(", "),
+						found
+					)
+				}
+			}
+			Self::UnexpectedType { expected, found } => {
+				write!(f, "expected `{expected}`, found `{found}`")
+			}
+		}
+	}
 }
 
 impl ParseError {
@@ -73,14 +123,25 @@ impl ParseError {
 	}
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug)]
 pub enum RuntimeError {
-	#[error("unknown variable: {0}")]
 	UnknownVariable(Ident),
-	#[error("invalid operation: {op:?}; lhs: {lhs:?}, rhs: {rhs:?}")]
 	InvalidOperation { op: ExprOp, lhs: Lit, rhs: Lit },
-	#[error("invalid condition: {cond:?}")]
 	InvalidCondition { cond: Lit },
+}
+
+impl fmt::Display for RuntimeError {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		match self {
+			Self::UnknownVariable(ident) => write!(f, "unknown variable `{ident}`"),
+			Self::InvalidOperation { op, lhs, rhs } => {
+				write!(f, "invalid operation on `{lhs}` {op} `{rhs}`")
+			}
+			Self::InvalidCondition { cond } => {
+				write!(f, "invalid condition: '{cond}'")
+			}
+		}
+	}
 }
 
 impl RuntimeError {
@@ -89,14 +150,23 @@ impl RuntimeError {
 	}
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug)]
 pub enum LexerError {
-	#[error("unexpected token: {token:?}")]
 	UnexpectedToken { token: char },
-	#[error("invalid number")]
 	InvalidNumber,
-	#[error("unexpected end of file")]
 	UnexpectedEof,
+}
+
+impl fmt::Display for LexerError {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		match self {
+			Self::UnexpectedToken { token } => {
+				write!(f, "unexpected token `{token}`")
+			}
+			Self::InvalidNumber => write!(f, "invalid number"),
+			Self::UnexpectedEof => write!(f, "unexpected end of file"),
+		}
+	}
 }
 
 impl LexerError {

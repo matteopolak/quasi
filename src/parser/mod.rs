@@ -45,7 +45,6 @@ impl TokenStream {
 	pub fn next(&mut self) -> Option<Token> {
 		let next = self.tokens.pop_front();
 
-		// TODO: Remove this clone
 		if let Some(next) = next.clone() {
 			self.used.push(next);
 		}
@@ -76,7 +75,7 @@ impl TokenStream {
 		Span::new(self.offset..self.offset + self.tokens.len())
 	}
 
-	pub fn tokens(&self, span: Span) -> Vec<Token> {
+	pub fn tokens(&self, span: &Span) -> Vec<Token> {
 		self.used
 			.iter()
 			.chain(self.tokens.iter())
@@ -136,7 +135,11 @@ pub fn instructionify(tokens: TokenStream) -> Instructionify {
 mod test {
 	use crate::{
 		lexer::{Cmp, Delim, Ident, Lit, Symbol},
-		parser::{body::Body, expr::ExprOp, instruction::InstructionKind},
+		parser::{
+			body::Body,
+			expr::ExprOp,
+			instruction::{assign::Assign, r#while::While, reassign::Reassign, InstructionKind},
+		},
 	};
 
 	use super::*;
@@ -168,10 +171,10 @@ mod test {
 
 		assert_eq!(
 			result,
-			vec![InstructionKind::Assign {
+			vec![InstructionKind::Assign(Assign {
 				ident: Ident::new("a"),
 				value: Expr::Lit(Lit::Number(1.)),
-			}],
+			})],
 		);
 	}
 
@@ -191,10 +194,10 @@ mod test {
 
 		assert_eq!(
 			result,
-			vec![InstructionKind::Reassign {
+			vec![InstructionKind::Reassign(Reassign {
 				ident: Ident::new("a"),
 				value: Expr::Lit(Lit::Number(1.)),
-			}],
+			})],
 		);
 	}
 
@@ -216,7 +219,7 @@ mod test {
 
 		assert_eq!(
 			result,
-			vec![InstructionKind::While {
+			vec![InstructionKind::While(While {
 				cond: Expr::Op {
 					op: ExprOp::Cmp(Cmp::Lt),
 					lhs: Box::new(Expr::Lit(Lit::Number(1.))),
@@ -225,7 +228,7 @@ mod test {
 				body: Box::new(Body {
 					instructions: vec![]
 				}),
-			}],
+			})],
 		);
 	}
 }

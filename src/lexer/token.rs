@@ -111,12 +111,12 @@ impl fmt::Display for TokenKind {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			Self::Eq => write!(f, "="),
-			Self::Cmp(cmp) => cmp.fmt(f),
-			Self::Op(op) => op.fmt(f),
-			Self::BoolOp(op) => op.fmt(f),
-			Self::Literal(lit) => lit.fmt(f),
+			Self::Cmp(_) => write!(f, "{{cmp}}"),
+			Self::Op(_) => write!(f, "{{op}}"),
+			Self::BoolOp(_) => write!(f, "{{boolop}}"),
+			Self::Literal(_) => write!(f, "{{literal}}"),
 			Self::Keyword(kw) => kw.fmt(f),
-			Self::Ident(ident) => ident.fmt(f),
+			Self::Ident(_) => write!(f, "{{ident}}"),
 			Self::Semi => write!(f, ";"),
 			Self::OpenDelim(d) => match d {
 				Delim::Paren => write!(f, "("),
@@ -182,9 +182,9 @@ impl Default for Lit {
 impl fmt::Display for Lit {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			Self::Number(n) => write!(f, "{}", n),
-			Self::String(s) => write!(f, "\"{}\"", s),
-			Self::Bool(b) => write!(f, "{}", b),
+			Self::Number(n) => write!(f, "{n}"),
+			Self::String(s) => write!(f, "\"{s}\""),
+			Self::Bool(b) => write!(f, "{b}"),
 		}
 	}
 }
@@ -304,13 +304,12 @@ impl PartialOrd for Op {
 impl Ord for Op {
 	fn cmp(&self, other: &Self) -> Ordering {
 		match (self, other) {
-			(Self::Exp, Self::Exp) => Ordering::Equal,
-			(Self::Add | Self::Sub, Self::Add | Self::Sub) => Ordering::Equal,
-			(Self::Mul | Self::Div | Self::Mod, Self::Mul | Self::Div | Self::Mod) => {
-				Ordering::Equal
+			(Self::Exp, Self::Exp)
+			| (Self::Add | Self::Sub, Self::Add | Self::Sub)
+			| (Self::Mul | Self::Div | Self::Mod, Self::Mul | Self::Div | Self::Mod) => Ordering::Equal,
+			(Self::Exp, _) | (Self::Mul | Self::Div | Self::Mod, Self::Add | Self::Sub) => {
+				Ordering::Greater
 			}
-			(Self::Exp, _) => Ordering::Greater,
-			(Self::Mul | Self::Div | Self::Mod, Self::Add | Self::Sub) => Ordering::Greater,
 			_ => Ordering::Less,
 		}
 	}

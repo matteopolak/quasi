@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::{
 	error,
 	lexer::{BoolOp, Cmp, Delim, Ident, Lit, Op, Token, TokenKind},
@@ -23,6 +25,16 @@ pub enum ExprOp {
 	Op(Op),
 	Cmp(Cmp),
 	BoolOp(BoolOp),
+}
+
+impl fmt::Display for ExprOp {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		match self {
+			Self::Op(op) => write!(f, "{op}"),
+			Self::Cmp(cmp) => write!(f, "{cmp}"),
+			Self::BoolOp(op) => write!(f, "{op}"),
+		}
+	}
 }
 
 impl Expr {

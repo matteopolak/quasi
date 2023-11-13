@@ -6,7 +6,7 @@ authors = ["Matthew Polak <me@matteopolak.com>"]
 description = "A slightly off-putting interpreted programming language."
 
 [dependencies]
-thiserror = "1"
+bytecount = "0.6"
 
 [dependencies.clap]
 version = "4"

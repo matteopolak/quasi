@@ -61,7 +61,7 @@ impl Iterator for Tokenize<'_> {
 		self.input = r;
 
 		// De-duplicate adjacent whitespace tokens
-		let whitespace = token.as_ref().map(Token::is_whitespace).unwrap_or(false);
+		let whitespace = token.as_ref().is_some_and(Token::is_whitespace);
 
 		if self.whitespace && whitespace {
 			return self.next();
@@ -85,7 +85,7 @@ mod test {
 			.map(|t| t.map(|t| t.kind))
 			.collect::<Result<Vec<_>, _>>();
 
-		assert!(tokens.is_ok(), "{:?}", tokens);
+		assert!(tokens.is_ok(), "{tokens:?}");
 
 		tokens.unwrap()
 	}

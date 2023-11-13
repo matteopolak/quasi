@@ -37,17 +37,11 @@ impl Parse for Body {
 		let mut instructions = Vec::new();
 
 		while let Some(Token { kind: token, .. }) = tokens.peek() {
-			match token {
-				TokenKind::CloseDelim(Delim::Bracket) => {
-					tokens.next();
-					break;
-				}
-				_ => {
-					let instruction = Instruction::parse(tokens)?;
-
-					instructions.push(instruction);
-				}
+			if let TokenKind::CloseDelim(Delim::Bracket) = token {
+				break;
 			}
+
+			instructions.push(Instruction::parse(tokens)?);
 		}
 
 		Ok(Self { instructions })

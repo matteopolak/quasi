@@ -8,7 +8,12 @@ pub use scope::Scope;
 use crate::{
 	error,
 	lexer::Lit,
-	parser::{instruction::InstructionKind, Instruction},
+	parser::{
+		instruction::{
+			assign::Assign, r#if::If, r#while::While, reassign::Reassign, InstructionKind,
+		},
+		Instruction,
+	},
 	Error,
 };
 
@@ -43,7 +48,7 @@ impl Executor {
 		for instruction in instructions {
 			match instruction {
 				Instruction {
-					kind: InstructionKind::Assign { ident, value },
+					kind: InstructionKind::Assign(Assign { ident, value }),
 					span,
 				} => {
 					let value = value
@@ -53,7 +58,7 @@ impl Executor {
 					scope.set(ident.clone(), value);
 				}
 				Instruction {
-					kind: InstructionKind::If { cond, body, el },
+					kind: InstructionKind::If(If { cond, body, el }),
 					span,
 				} => {
 					let mut child_scope = Scope::with_parent(scope);
@@ -85,12 +90,12 @@ impl Executor {
 					.resolve(&scope)
 					.map_err(|e| e.with_span(span.clone()))?
 				{
-					Lit::Number(n) => writeln!(out, "{}", n)?,
-					Lit::String(s) => writeln!(out, "{}", s)?,
-					Lit::Bool(b) => writeln!(out, "{}", b)?,
+					Lit::Number(n) => writeln!(out, "{n}")?,
+					Lit::String(s) => writeln!(out, "{s}")?,
+					Lit::Bool(b) => writeln!(out, "{b}")?,
 				},
 				Instruction {
-					kind: InstructionKind::Reassign { ident, value },
+					kind: InstructionKind::Reassign(Reassign { ident, value }),
 					span,
 				} => {
 					let value = match value.resolve(&scope) {
@@ -103,7 +108,7 @@ impl Executor {
 						.map_err(|e| e.with_span(span.clone()))?;
 				}
 				Instruction {
-					kind: InstructionKind::While { cond: expr, body },
+					kind: InstructionKind::While(While { cond: expr, body }),
 					span,
 				} => {
 					let mut child_scope = Scope::with_parent(scope);
@@ -164,14 +169,14 @@ mod test {
 	#[test]
 	fn test_execute() {
 		let mut executor = Executor::from_iter(vec![
-			Instruction::new(InstructionKind::Assign {
+			Instruction::new(InstructionKind::Assign(Assign {
 				ident: Ident::new("a"),
 				value: Expr::Op {
 					op: ExprOp::Op(Op::Add),
 					lhs: Box::new(Expr::Lit(Lit::Number(1.0))),
 					rhs: Box::new(Expr::Lit(Lit::Number(2.0))),
 				},
-			}),
+			})),
 			Instruction::new(InstructionKind::Print {
 				value: Expr::Ident(Ident::new("a")),
 			}),
@@ -186,11 +191,11 @@ mod test {
 	#[test]
 	fn test_execute_if() {
 		let mut executor = Executor::from_iter(vec![
-			Instruction::new(InstructionKind::Assign {
+			Instruction::new(InstructionKind::Assign(Assign {
 				ident: Ident::new("a"),
 				value: Expr::Lit(Lit::Bool(true)),
-			}),
-			Instruction::new(InstructionKind::If {
+			})),
+			Instruction::new(InstructionKind::If(If {
 				cond: Expr::Ident(Ident::new("a")),
 				body: Box::new(Body {
 					instructions: vec![Instruction {
@@ -201,7 +206,7 @@ mod test {
 					}],
 				}),
 				el: None,
-			}),
+			})),
 		]);
 
 		let mut out = Vec::new();
@@ -213,11 +218,11 @@ mod test {
 	#[test]
 	fn test_execute_if_else() {
 		let mut executor = Executor::from_iter(vec![
-			Instruction::new(InstructionKind::Assign {
+			Instruction::new(InstructionKind::Assign(Assign {
 				ident: Ident::new("a"),
 				value: Expr::Lit(Lit::Bool(false)),
-			}),
-			Instruction::new(InstructionKind::If {
+			})),
+			Instruction::new(InstructionKind::If(If {
 				cond: Expr::Ident(Ident::new("a")),
 				body: Box::new(Body {
 					instructions: vec![Instruction {
@@ -235,7 +240,7 @@ mod test {
 						span: Span::default(),
 					}],
 				})),
-			}),
+			})),
 		]);
 
 		let mut out = Vec::new();
@@ -247,11 +252,11 @@ mod test {
 	#[test]
 	fn test_execute_while() {
 		let mut executor = Executor::from_iter(vec![
-			Instruction::new(InstructionKind::Assign {
+			Instruction::new(InstructionKind::Assign(Assign {
 				ident: Ident::new("a"),
 				value: Expr::Lit(Lit::Number(0.0)),
-			}),
-			Instruction::new(InstructionKind::While {
+			})),
+			Instruction::new(InstructionKind::While(While {
 				cond: Expr::Op {
 					op: ExprOp::Cmp(Cmp::Lt),
 					lhs: Box::new(Expr::Ident(Ident::new("a"))),
@@ -260,14 +265,14 @@ mod test {
 				body: Box::new(Body {
 					instructions: vec![
 						Instruction {
-							kind: InstructionKind::Reassign {
+							kind: InstructionKind::Reassign(Reassign {
 								ident: Ident::new("a"),
 								value: Expr::Op {
 									op: ExprOp::Op(Op::Add),
 									lhs: Box::new(Expr::Ident(Ident::new("a"))),
 									rhs: Box::new(Expr::Lit(Lit::Number(1.0))),
 								},
-							},
+							}),
 							span: Span::default(),
 						},
 						Instruction {
@@ -278,7 +283,7 @@ mod test {
 						},
 					],
 				}),
-			}),
+			})),
 			Instruction::new(InstructionKind::Print {
 				value: Expr::Ident(Ident::new("a")),
 			}),

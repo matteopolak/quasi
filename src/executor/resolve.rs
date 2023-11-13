@@ -30,8 +30,8 @@ impl Expr {
 					(ExprOp::Cmp(op), Lit::Number(lhs), Lit::Number(rhs)) => match op {
 						Cmp::Lt => Lit::Bool(lhs < rhs),
 						Cmp::Le => Lit::Bool(lhs <= rhs),
-						Cmp::EqEq => Lit::Bool(lhs == rhs),
-						Cmp::Ne => Lit::Bool(lhs != rhs),
+						Cmp::EqEq => Lit::Bool((lhs - rhs).abs() < f64::EPSILON),
+						Cmp::Ne => Lit::Bool((lhs - rhs).abs() >= f64::EPSILON),
 						Cmp::Ge => Lit::Bool(lhs >= rhs),
 						Cmp::Gt => Lit::Bool(lhs > rhs),
 					},
