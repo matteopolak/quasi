@@ -33,6 +33,8 @@ quasi 0.1.0
 ## Usage
 
 ```bash
+A slightly off-putting interpreted programming language.
+
 Usage: quasi <PATH>
 
 Arguments:
