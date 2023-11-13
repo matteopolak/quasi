@@ -41,14 +41,33 @@ pub enum InstructionKind {
 	Fn(r#fn::Fn),
 	FnCall(r#fn::FnCall),
 	For(r#for::For),
+	Return(Expr),
 }
 
 impl Parse for Instruction {
+	#[allow(clippy::too_many_lines)]
 	fn parse(tokens: &mut TokenStream) -> Result<Self, ParseError>
 	where
 		Self: Sized,
 	{
 		Ok(match tokens.peek() {
+			Some(Token {
+				kind: TokenKind::Keyword(Symbol::Return),
+				span,
+			}) => {
+				let start = span.clone();
+
+				tokens.next();
+
+				let value = Expr::parse(tokens)?;
+
+				expect!(tokens, [Semi => Semi]);
+
+				Instruction {
+					span: start.to(&tokens.span()),
+					kind: InstructionKind::Return(value),
+				}
+			}
 			Some(Token {
 				kind: TokenKind::Keyword(Symbol::Let),
 				span,
@@ -74,9 +93,15 @@ impl Parse for Instruction {
 			Some(Token {
 				kind: TokenKind::Ident(..),
 				span,
-			}) => Instruction {
-				span: span.to(&tokens.span()),
-				kind: InstructionKind::FnCall(r#fn::FnCall::parse(tokens)?),
+			}) => {
+				let i = Instruction {
+					span: span.to(&tokens.span()),
+					kind: InstructionKind::FnCall(r#fn::FnCall::parse(tokens)?),
+				};
+
+				expect!(tokens, [Semi => Semi]);
+
+				i
 			},
 			Some(Token {
 				kind: TokenKind::Keyword(Symbol::If),

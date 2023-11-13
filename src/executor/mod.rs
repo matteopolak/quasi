@@ -17,8 +17,6 @@ use crate::{
 	Error,
 };
 
-use self::scope::Value;
-
 pub struct Executor {
 	pub instructions: Vec<Instruction>,
 }
@@ -43,21 +41,30 @@ impl Executor {
 	}
 
 	#[allow(clippy::too_many_lines)]
-	pub fn _execute<'a>(
+	pub fn _execute(
 		out: &mut impl Write,
 		instructions: &[Instruction],
-		mut scope: Scope<'a>,
-	) -> Result<Scope<'a>, Error> {
+		mut scope: Scope,
+	) -> Result<Scope, Error> {
 		for instruction in instructions {
 			match instruction {
+				Instruction {
+					kind: InstructionKind::Return(expr),
+					span,
+				} => {
+					let (scope, value) = expr.resolve(scope, out, span)?;
+
+					return Err(
+						error::RuntimeError::Return { value, scope }.with_span(span.clone())
+					);
+				}
 				Instruction {
 					kind: InstructionKind::Assign(Assign { ident, value }),
 					span,
 				} => {
-					let value = value
-						.resolve(&scope)
-						.map_err(|e| e.with_span(span.clone()))?;
+					let (s, value) = value.resolve(scope, out, span)?;
 
+					scope = s;
 					scope.set(ident.clone(), value);
 				}
 				Instruction {
@@ -66,17 +73,13 @@ impl Executor {
 				} => {
 					let mut child_scope = Scope::with_parent(scope);
 
-					let cond = cond
-						.resolve(&child_scope)
-						.map_err(|e| e.with_span(span.clone()))?;
+					let (s, cond) = cond.resolve(child_scope, out, span).and_then(|(s, l)| {
+						l.try_bool()
+							.map_err(|e| e.with_span(span.clone()))
+							.map(|b| (s, b))
+					})?;
 
-					let cond = match cond {
-						Value::Lit(Lit::Bool(b)) => b,
-						other => {
-							return Err(error::RuntimeError::InvalidCondition { cond: other }
-								.with_span(span.clone()));
-						}
-					};
+					child_scope = s;
 
 					if cond {
 						child_scope = Self::_execute(out, &body.instructions, child_scope)?;
@@ -89,24 +92,24 @@ impl Executor {
 				Instruction {
 					kind: InstructionKind::Print { value },
 					span,
-				} => match value
-					.resolve(&scope)
-					.map_err(|e| e.with_span(span.clone()))?
-				{
-					Value::Lit(Lit::Number(n)) => writeln!(out, "{n}")?,
-					Value::Lit(Lit::String(s)) => writeln!(out, "{s}")?,
-					Value::Lit(Lit::Bool(b)) => writeln!(out, "{b}")?,
-					Value::Fn(fu) => writeln!(out, "{fu}")?,
-				},
+				} => {
+					let (s, lit) = value.resolve(scope, out, span)?;
+
+					scope = s;
+
+					match lit {
+						Lit::Number(n) => writeln!(out, "{n}")?,
+						Lit::String(s) => writeln!(out, "{s}")?,
+						Lit::Bool(b) => writeln!(out, "{b}")?,
+					}
+				}
 				Instruction {
 					kind: InstructionKind::Reassign(Reassign { ident, value }),
 					span,
 				} => {
-					let value = match value.resolve(&scope) {
-						Ok(value) => value,
-						Err(e) => return Err(e.with_span(span.clone())),
-					};
+					let (s, value) = value.resolve(scope, out, span)?;
 
+					scope = s;
 					scope
 						.reassign(ident, value)
 						.map_err(|e| e.with_span(span.clone()))?;
@@ -117,18 +120,14 @@ impl Executor {
 				} => {
 					let mut child_scope = Scope::with_parent(scope);
 
-					let cond_lit = match expr.resolve(&child_scope) {
-						Ok(cond) => cond,
-						Err(e) => return Err(e.with_span(span.clone())),
-					};
+					let (s, mut cond) =
+						expr.resolve(child_scope, out, span).and_then(|(s, l)| {
+							l.try_bool()
+								.map_err(|e| e.with_span(span.clone()))
+								.map(|b| (s, b))
+						})?;
 
-					let mut cond = match cond_lit {
-						Value::Lit(Lit::Bool(b)) => b,
-						other => {
-							return Err(error::RuntimeError::InvalidCondition { cond: other }
-								.with_span(span.clone()));
-						}
-					};
+					child_scope = s;
 
 					while cond {
 						child_scope = Self::_execute(
@@ -138,18 +137,14 @@ impl Executor {
 						)?
 						.close();
 
-						let cond_lit = match expr.resolve(&child_scope) {
-							Ok(cond) => cond,
-							Err(e) => return Err(e.with_span(span.clone())),
-						};
+						let (s, c) = expr.resolve(child_scope, out, span).and_then(|(s, l)| {
+							l.try_bool()
+								.map_err(|e| e.with_span(span.clone()))
+								.map(|b| (s, b))
+						})?;
 
-						cond = match cond_lit {
-							Value::Lit(Lit::Bool(b)) => b,
-							other => {
-								return Err(error::RuntimeError::InvalidCondition { cond: other }
-									.with_span(span.clone()));
-							}
-						};
+						cond = c;
+						child_scope = s;
 					}
 
 					scope = child_scope.close();
@@ -160,16 +155,22 @@ impl Executor {
 				} => {
 					let mut child_scope = Scope::with_parent(scope);
 
-					child_scope = call.execute(child_scope, out, span)?;
+					child_scope = match call.execute(child_scope, out, span) {
+						Err(Error::Runtime {
+							source: error::RuntimeError::Return { scope, .. },
+							..
+						}) => scope,
+						o => o?,
+					};
 					scope = child_scope.close();
 				}
 				Instruction {
 					kind: InstructionKind::Fn(fu),
 					..
 				} => {
-					let value = Value::from(fu.clone());
+					let value = fu.clone();
 
-					scope.set(fu.name.clone(), value);
+					scope.set_fn(fu.name.clone(), value);
 				}
 				Instruction {
 					kind: InstructionKind::For(r#for),
@@ -179,14 +180,17 @@ impl Executor {
 
 					child_scope = Self::_execute(out, &[*r#for.setup.clone()], child_scope)?;
 
-					let mut cond = match r#for.cond.resolve(&child_scope) {
-						Ok(Value::Lit(Lit::Bool(cond))) => cond,
-						Ok(other) => {
-							return Err(error::RuntimeError::InvalidCondition { cond: other }
-								.with_span(span.clone()));
-						}
-						Err(e) => return Err(e.with_span(span.clone())),
-					};
+					let (s, mut cond) =
+						r#for
+							.cond
+							.resolve(child_scope, out, span)
+							.and_then(|(s, l)| {
+								l.try_bool()
+									.map_err(|e| e.with_span(span.clone()))
+									.map(|b| (s, b))
+							})?;
+
+					child_scope = s;
 
 					while cond {
 						let mut inner_scope = Scope::with_parent(child_scope);
@@ -195,14 +199,18 @@ impl Executor {
 						child_scope = inner_scope.close();
 						child_scope = Self::_execute(out, &[*r#for.update.clone()], child_scope)?;
 
-						cond = match r#for.cond.resolve(&child_scope) {
-							Ok(Value::Lit(Lit::Bool(cond))) => cond,
-							Ok(other) => {
-								return Err(error::RuntimeError::InvalidCondition { cond: other }
-									.with_span(span.clone()));
-							}
-							Err(e) => return Err(e.with_span(span.clone())),
-						};
+						let (s, c) =
+							r#for
+								.cond
+								.resolve(child_scope, out, span)
+								.and_then(|(s, l)| {
+									l.try_bool()
+										.map_err(|e| e.with_span(span.clone()))
+										.map(|b| (s, b))
+								})?;
+
+						cond = c;
+						child_scope = s;
 					}
 
 					scope = child_scope.close();

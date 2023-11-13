@@ -1,7 +1,7 @@
 use std::{fmt, io};
 
 use crate::{
-	executor::scope::Value,
+	executor::Scope,
 	lexer::{Ident, Lit, Token, TokenKind},
 	parser::{expr::ExprOp, TokenStream},
 	span::Span,
@@ -127,8 +127,22 @@ impl ParseError {
 #[derive(Debug)]
 pub enum RuntimeError {
 	UnknownVariable(Ident),
-	InvalidOperation { op: ExprOp, lhs: Value, rhs: Value },
-	InvalidCondition { cond: Value },
+	InvalidOperation {
+		op: ExprOp,
+		lhs: Lit,
+		rhs: Lit,
+	},
+	InvalidType {
+		expected: Lit,
+		found: Lit,
+	},
+	/// This error is "caught" when in a function context, but will be propagated
+	/// to the top level and form an error if needed.
+	Return {
+		value: Lit,
+		scope: Scope,
+	},
+	MissingReturn,
 }
 
 impl fmt::Display for RuntimeError {
@@ -138,9 +152,11 @@ impl fmt::Display for RuntimeError {
 			Self::InvalidOperation { op, lhs, rhs } => {
 				write!(f, "invalid operation on `{lhs}` {op} `{rhs}`")
 			}
-			Self::InvalidCondition { cond } => {
-				write!(f, "invalid condition: '{cond}'")
+			Self::InvalidType { expected, found } => {
+				write!(f, "expected `{expected}`, found `{found}`")
 			}
+			Self::Return { value, .. } => write!(f, "returned `{value}` outside of a function"),
+			Self::MissingReturn => write!(f, "missing return value when used as an expression"),
 		}
 	}
 }

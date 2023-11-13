@@ -1,8 +1,8 @@
 use std::{fmt, io::Write};
 
 use crate::{
-	error::{self, ParseError},
-	executor::{scope::Value, Executor, Scope},
+	error::ParseError,
+	executor::{Executor, Scope},
 	expect,
 	lexer::{Delim, Ident, Symbol, Token, TokenKind},
 	parser::{body::Body, Expr, Parse, TokenStream},
@@ -85,29 +85,18 @@ pub struct FnCall {
 }
 
 impl FnCall {
-	pub fn execute<'a>(
-		&self,
-		scope: Scope<'a>,
-		out: &mut impl Write,
-		span: &Span,
-	) -> Result<Scope<'a>, Error> {
-		let Value::Fn(function) = scope
-			.get(&self.name)
+	pub fn execute(&self, scope: Scope, out: &mut impl Write, span: &Span) -> Result<Scope, Error> {
+		let function = scope
+			.get_fn(&self.name)
 			.cloned()
-			.map_err(|e| e.with_span(span.clone()))?
-		else {
-			return Err(
-				error::RuntimeError::UnknownVariable(self.name.clone()).with_span(span.clone())
-			);
-		};
+			.map_err(|e| e.with_span(span.clone()))?;
 
 		let mut fn_scope = Scope::with_parent(scope);
 
 		for (arg, param) in self.args.iter().zip(function.args.iter()) {
-			let value = arg
-				.resolve(&fn_scope)
-				.map_err(|e| e.with_span(span.clone()))?;
+			let (scope, value) = arg.resolve(fn_scope, out, span)?;
 
+			fn_scope = scope;
 			fn_scope.set(param.clone(), value);
 		}
 
@@ -151,7 +140,6 @@ impl Parse for FnCall {
 		}
 
 		expect!(tokens, [CloseDelim(Delim::Paren) => CloseDelim(Delim::Paren)]);
-		expect!(tokens, [Semi => Semi]);
 
 		Ok(Self { name, args })
 	}

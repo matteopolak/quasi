@@ -1,9 +1,6 @@
 use std::{cmp::Ordering, fmt, hint::unreachable_unchecked, ops::Deref};
 
-use super::{
-	util::{is_gap, is_whitespace},
-	Decode,
-};
+use super::{util::is_gap, Decode};
 use crate::{error, span::Span};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -174,6 +171,18 @@ pub enum Lit {
 	Number(f64),
 	String(String),
 	Bool(bool),
+}
+
+impl Lit {
+	pub fn try_bool(self) -> Result<bool, error::RuntimeError> {
+		match self {
+			Lit::Bool(b) => Ok(b),
+			_ => Err(error::RuntimeError::InvalidType {
+				expected: Lit::Bool(false),
+				found: self,
+			}),
+		}
+	}
 }
 
 impl Default for Lit {
@@ -358,6 +367,7 @@ pub enum Symbol {
 	While,
 	Fn,
 	For,
+	Return,
 }
 
 impl fmt::Display for Symbol {
@@ -370,6 +380,7 @@ impl fmt::Display for Symbol {
 			Self::While => write!(f, "while"),
 			Self::Fn => write!(f, "fn"),
 			Self::For => write!(f, "for"),
+			Self::Return => write!(f, "return"),
 		}
 	}
 }
@@ -379,13 +390,14 @@ impl Decode for Symbol {
 
 	fn decode(input: &[u8]) -> Result<(Option<Symbol>, &[u8]), Self::Error> {
 		let (t, r) = match input {
-			[b'l', b'e', b't', r @ ..] if is_whitespace(r) => (Self::Let, r),
-			[b'i', b'f', r @ ..] if is_whitespace(r) => (Self::If, r),
-			[b'p', b'r', b'i', b'n', b't', r @ ..] if is_whitespace(r) => (Self::Print, r),
+			[b'l', b'e', b't', r @ ..] if is_gap(r) => (Self::Let, r),
+			[b'i', b'f', r @ ..] if is_gap(r) => (Self::If, r),
+			[b'p', b'r', b'i', b'n', b't', r @ ..] if is_gap(r) => (Self::Print, r),
 			[b'e', b'l', b's', b'e', r @ ..] if is_gap(r) => (Self::Else, r),
-			[b'w', b'h', b'i', b'l', b'e', r @ ..] if is_whitespace(r) => (Self::While, r),
-			[b'f', b'n', r @ ..] if is_whitespace(r) => (Self::Fn, r),
-			[b'f', b'o', b'r', r @ ..] if is_whitespace(r) => (Self::For, r),
+			[b'w', b'h', b'i', b'l', b'e', r @ ..] if is_gap(r) => (Self::While, r),
+			[b'f', b'n', r @ ..] if is_gap(r) => (Self::Fn, r),
+			[b'f', b'o', b'r', r @ ..] if is_gap(r) => (Self::For, r),
+			[b'r', b'e', b't', b'u', b'r', b'n', r @ ..] if is_gap(r) => (Self::Return, r),
 			_ => return Ok((None, input)),
 		};
 

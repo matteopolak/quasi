@@ -5,12 +5,13 @@ use crate::{
 	lexer::{BoolOp, Cmp, Delim, Ident, Lit, Op, Token, TokenKind},
 };
 
-use super::{Parse, TokenStream};
+use super::{instruction::r#fn::FnCall, Parse, TokenStream};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Expr {
 	Lit(Lit),
 	Ident(Ident),
+	FnCall(FnCall),
 	/// An expression that is grouped by parentheses.
 	Grouped(Box<Self>),
 	Op {
@@ -133,10 +134,33 @@ impl Expr {
 	}
 
 	fn parse_factor(tokens: &mut TokenStream) -> Result<Self, error::ParseError> {
-		match tokens.next().map(|t| t.kind) {
-			Some(TokenKind::Literal(lit)) => Ok(Self::Lit(lit)),
-			Some(TokenKind::Ident(ident)) => Ok(Self::Ident(ident)),
-			Some(TokenKind::OpenDelim(Delim::Paren)) => {
+		match tokens.next() {
+			Some(Token {
+				kind: TokenKind::Literal(lit),
+				..
+			}) => Ok(Self::Lit(lit)),
+			Some(Token {
+				kind: TokenKind::Ident(ident),
+				..
+			}) if tokens.peek().map(Token::kind) != Some(&TokenKind::OpenDelim(Delim::Paren)) => {
+				Ok(Self::Ident(ident))
+			}
+			Some(
+				token @ Token {
+					kind: TokenKind::Ident(..),
+					..
+				},
+			) => {
+				tokens.ret(token);
+
+				let call = FnCall::parse(tokens)?;
+
+				Ok(Self::FnCall(call))
+			}
+			Some(Token {
+				kind: TokenKind::OpenDelim(Delim::Paren),
+				..
+			}) => {
 				let expr = Self::parse(tokens)?;
 
 				match tokens.next().map(|t| t.kind) {
@@ -157,7 +181,7 @@ impl Expr {
 					TokenKind::Ident(Ident::default()),
 					TokenKind::OpenDelim(Delim::Paren),
 				],
-				other,
+				other.map(|t| t.kind),
 			)),
 		}
 	}
