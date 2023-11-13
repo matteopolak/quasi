@@ -95,13 +95,9 @@ for let i = 0; i < 10; i = i + 1; [
 
 ```rust
 fn is_even(a) [
-  if a % 2 == 0 [
-    print "even";
-  ] else [
-    print "odd";
-  ]
+  return a % 2 == 0;
 ]
 
-is_even(10); # even
-is_even(15); # odd
+print is_even(10); # true
+print is_even(15); # false
 ```
