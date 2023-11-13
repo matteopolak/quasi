@@ -12,11 +12,13 @@ pub enum Expr {
 	Lit(Lit),
 	Ident(Ident),
 	FnCall(FnCall),
-	/// An expression that is grouped by parentheses.
-	Grouped(Box<Self>),
 	Op {
 		op: ExprOp,
 		lhs: Box<Self>,
+		rhs: Box<Self>,
+	},
+	Unary {
+		op: ExprOp,
 		rhs: Box<Self>,
 	},
 }
@@ -173,7 +175,29 @@ impl Expr {
 					}
 				}
 
-				Ok(Self::Grouped(Box::new(expr)))
+				Ok(expr)
+			}
+			Some(Token {
+				kind: TokenKind::BoolOp(BoolOp::Not),
+				..
+			}) => {
+				let rhs = Self::parse_factor(tokens)?;
+
+				Ok(Self::Unary {
+					op: ExprOp::BoolOp(BoolOp::Not),
+					rhs: Box::new(rhs),
+				})
+			}
+			Some(Token {
+				kind: TokenKind::Op(Op::Sub),
+				..
+			}) => {
+				let rhs = Self::parse_factor(tokens)?;
+
+				Ok(Self::Unary {
+					op: ExprOp::Op(Op::Sub),
+					rhs: Box::new(rhs),
+				})
 			}
 			other => Err(error::ParseError::expected(
 				vec![

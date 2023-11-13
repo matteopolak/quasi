@@ -129,7 +129,7 @@ pub enum RuntimeError {
 	UnknownVariable(Ident),
 	InvalidOperation {
 		op: ExprOp,
-		lhs: Lit,
+		lhs: Option<Lit>,
 		rhs: Lit,
 	},
 	InvalidType {
@@ -150,7 +150,11 @@ impl fmt::Display for RuntimeError {
 		match self {
 			Self::UnknownVariable(ident) => write!(f, "unknown variable `{ident}`"),
 			Self::InvalidOperation { op, lhs, rhs } => {
-				write!(f, "invalid operation on `{lhs}` {op} `{rhs}`")
+				if let Some(lhs) = lhs {
+					write!(f, "invalid operation `{op}` between `{lhs}` and `{rhs}`")
+				} else {
+					write!(f, "invalid operation `{op}` on `{rhs}`")
+				}
 			}
 			Self::InvalidType { expected, found } => {
 				write!(f, "expected `{expected}`, found `{found}`")

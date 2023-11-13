@@ -139,6 +139,7 @@ pub enum BoolOp {
 	#[default]
 	And,
 	Or,
+	Not,
 }
 
 impl PartialOrd for BoolOp {
@@ -162,6 +163,7 @@ impl fmt::Display for BoolOp {
 		match self {
 			Self::And => write!(f, "&&"),
 			Self::Or => write!(f, "||"),
+			Self::Not => write!(f, "!"),
 		}
 	}
 }
@@ -529,6 +531,7 @@ impl Decode for TokenKind {
 			[b']', r @ ..] => (Self::CloseDelim(Delim::Bracket), r),
 			[b'&', b'&', r @ ..] => (Self::BoolOp(BoolOp::And), r),
 			[b'|', b'|', r @ ..] => (Self::BoolOp(BoolOp::Or), r),
+			[b'!', r @ ..] => (Self::BoolOp(BoolOp::Not), r),
 			[b',', r @ ..] => (Self::Comma, r),
 			_ => {
 				if let Ok((Some(t), r)) = Op::decode(input) {

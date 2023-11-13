@@ -25,7 +25,6 @@ impl Expr {
 					.map(|lit| (scope, lit))
 					.map_err(|e| e.with_span(span.clone()))
 			}
-			Self::Grouped(expr) => return expr.resolve(scope, out, span),
 			Self::FnCall(call) => {
 				let (lit, scope) = match call.execute(scope, out, span) {
 					Err(Error::Runtime {
@@ -40,6 +39,24 @@ impl Expr {
 				}
 
 				return Err(RuntimeError::MissingReturn.with_span(span.clone()));
+			}
+			Self::Unary { op, rhs } => {
+				let (s, rhs) = rhs.resolve(scope, out, span)?;
+
+				scope = s;
+
+				match (op, &rhs) {
+					(ExprOp::Op(Op::Sub), Lit::Number(rhs)) => Lit::Number(-rhs),
+					(ExprOp::BoolOp(BoolOp::Not), Lit::Bool(rhs)) => Lit::Bool(!rhs),
+					_ => {
+						return Err(RuntimeError::InvalidOperation {
+							lhs: None,
+							op: *op,
+							rhs,
+						}
+						.with_span(span.clone()));
+					}
+				}
 			}
 			Self::Op { op, lhs, rhs } => {
 				let (s, lhs) = lhs.resolve(scope, out, span)?;
@@ -75,13 +92,22 @@ impl Expr {
 						Cmp::Ge => Lit::Bool(lhs >= rhs),
 						Cmp::Gt => Lit::Bool(lhs > rhs),
 					},
-					(ExprOp::BoolOp(op), Lit::Bool(lhs), Lit::Bool(rhs)) => match op {
+					(
+						ExprOp::BoolOp(op @ (BoolOp::And | BoolOp::Or)),
+						Lit::Bool(lhs),
+						Lit::Bool(rhs),
+					) => match op {
 						BoolOp::And => Lit::Bool(*lhs && *rhs),
 						BoolOp::Or => Lit::Bool(*lhs || *rhs),
+						BoolOp::Not => unreachable!(),
 					},
 					_ => {
-						return Err(RuntimeError::InvalidOperation { lhs, op: *op, rhs }
-							.with_span(span.clone()));
+						return Err(RuntimeError::InvalidOperation {
+							lhs: Some(lhs),
+							op: *op,
+							rhs,
+						}
+						.with_span(span.clone()));
 					}
 				}
 			}
