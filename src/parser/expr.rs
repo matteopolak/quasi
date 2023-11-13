@@ -54,15 +54,10 @@ impl Expr {
 		let mut expr = Self::parse_term(tokens)?;
 
 		while let Some(Token {
-			kind: TokenKind::Op(op),
+			kind: TokenKind::Op(op @ (Op::Add | Op::Sub)),
 			..
 		}) = tokens.peek()
 		{
-			match op {
-				Op::Add | Op::Sub => (),
-				_ => break,
-			}
-
 			let op = *op;
 
 			tokens.next();
@@ -83,15 +78,10 @@ impl Expr {
 		let mut expr = Self::parse_exponent(tokens)?;
 
 		while let Some(Token {
-			kind: TokenKind::Op(op),
+			kind: TokenKind::Op(op @ (Op::Mul | Op::Div | Op::Mod)),
 			..
 		}) = tokens.peek()
 		{
-			match op {
-				Op::Mul | Op::Div | Op::Mod => (),
-				_ => break,
-			}
-
 			let op = *op;
 
 			tokens.next();
