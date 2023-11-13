@@ -1,18 +1,21 @@
 pub mod assign;
+pub mod r#fn;
+pub mod r#for;
 pub mod r#if;
 pub mod reassign;
 pub mod r#while;
 
 use crate::{
 	error::ParseError,
-	lexer::{Symbol, Token, TokenKind},
+	expect,
+	lexer::{Delim, Ident, Symbol, Token, TokenKind},
 	parser::Expr,
 	span::Span,
 };
 
 use super::{Parse, TokenStream};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Instruction {
 	pub kind: InstructionKind,
 	pub span: Span,
@@ -28,13 +31,16 @@ impl Instruction {
 	}
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum InstructionKind {
 	Assign(assign::Assign),
 	Reassign(reassign::Reassign),
 	If(r#if::If),
 	Print { value: Expr },
 	While(r#while::While),
+	Fn(r#fn::Fn),
+	FnCall(r#fn::FnCall),
+	For(r#for::For),
 }
 
 impl Parse for Instruction {
@@ -53,9 +59,24 @@ impl Parse for Instruction {
 			Some(Token {
 				kind: TokenKind::Ident(..),
 				span,
+			})
+			// In order for `{ident} = {expr}` to be a reassignment, the next token
+			// cannot be `(`, because that would be a function call.
+			if !(*tokens)
+				.nth(1)
+				.is_some_and(|t| t.kind == TokenKind::OpenDelim(Delim::Paren)) =>
+			{
+				Instruction {
+					span: span.to(&tokens.span()),
+					kind: InstructionKind::Reassign(reassign::Reassign::parse(tokens)?),
+				}
+			}
+			Some(Token {
+				kind: TokenKind::Ident(..),
+				span,
 			}) => Instruction {
 				span: span.to(&tokens.span()),
-				kind: InstructionKind::Reassign(reassign::Reassign::parse(tokens)?),
+				kind: InstructionKind::FnCall(r#fn::FnCall::parse(tokens)?),
 			},
 			Some(Token {
 				kind: TokenKind::Keyword(Symbol::If),
@@ -74,10 +95,7 @@ impl Parse for Instruction {
 
 				let value = Expr::parse(tokens)?;
 
-				match tokens.next().map(|t| t.kind) {
-					Some(TokenKind::Semi) => (),
-					other => return Err(ParseError::expected(vec![TokenKind::Semi], other)),
-				};
+				expect!(tokens, [Semi => Semi]);
 
 				Instruction {
 					kind: InstructionKind::Print { value },
@@ -91,12 +109,30 @@ impl Parse for Instruction {
 				span: span.to(&tokens.span()),
 				kind: InstructionKind::While(r#while::While::parse(tokens)?),
 			},
+			Some(Token {
+				kind: TokenKind::Keyword(Symbol::Fn),
+				span,
+			}) => Instruction {
+				span: span.to(&tokens.span()),
+				kind: InstructionKind::Fn(r#fn::Fn::parse(tokens)?),
+			},
+			Some(Token {
+				kind: TokenKind::Keyword(Symbol::For),
+				span,
+			}) => Instruction {
+				span: span.to(&tokens.span()),
+				kind: InstructionKind::For(r#for::For::parse(tokens)?),
+			},
 			_ => {
 				return Err(ParseError::expected(
 					vec![
 						TokenKind::Keyword(Symbol::Let),
 						TokenKind::Keyword(Symbol::If),
 						TokenKind::Keyword(Symbol::Print),
+						TokenKind::Keyword(Symbol::While),
+						TokenKind::Ident(Ident::default()),
+						TokenKind::Keyword(Symbol::For),
+						TokenKind::Keyword(Symbol::Fn),
 					],
 					tokens.next().map(|t| t.kind),
 				));

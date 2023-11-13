@@ -1,4 +1,4 @@
-use super::Scope;
+use super::{scope::Value, Scope};
 use crate::{
 	error::RuntimeError,
 	lexer::{BoolOp, Cmp, Lit, Op},
@@ -6,17 +6,21 @@ use crate::{
 };
 
 impl Expr {
-	pub fn resolve(&self, scope: &Scope) -> Result<Lit, RuntimeError> {
+	pub fn resolve(&self, scope: &Scope) -> Result<Value, RuntimeError> {
 		Ok(match self {
 			Self::Lit(lit) => lit.clone(),
-			Self::Ident(ident) => scope.get(ident)?.clone(),
-			Self::Grouped(expr) => expr.resolve(scope)?,
+			Self::Ident(ident) => return scope.get(ident).cloned(),
+			Self::Grouped(expr) => return expr.resolve(scope),
 			Self::Op { op, lhs, rhs } => {
 				let lhs = lhs.resolve(scope)?;
 				let rhs = rhs.resolve(scope)?;
 
 				match (op, &lhs, &rhs) {
-					(ExprOp::Op(op), Lit::Number(lhs), Lit::Number(rhs)) => match op {
+					(
+						ExprOp::Op(op),
+						Value::Lit(Lit::Number(lhs)),
+						Value::Lit(Lit::Number(rhs)),
+					) => match op {
 						Op::Add => Lit::Number(lhs + rhs),
 						Op::Sub => Lit::Number(lhs - rhs),
 						Op::Mul => Lit::Number(lhs * rhs),
@@ -24,10 +28,16 @@ impl Expr {
 						Op::Mod => Lit::Number(lhs % rhs),
 						Op::Exp => Lit::Number(lhs.powf(*rhs)),
 					},
-					(ExprOp::Op(Op::Add), Lit::String(lhs), Lit::String(rhs)) => {
-						Lit::String(lhs.clone() + rhs)
-					}
-					(ExprOp::Cmp(op), Lit::Number(lhs), Lit::Number(rhs)) => match op {
+					(
+						ExprOp::Op(Op::Add),
+						Value::Lit(Lit::String(lhs)),
+						Value::Lit(Lit::String(rhs)),
+					) => Lit::String(lhs.clone() + rhs),
+					(
+						ExprOp::Cmp(op),
+						Value::Lit(Lit::Number(lhs)),
+						Value::Lit(Lit::Number(rhs)),
+					) => match op {
 						Cmp::Lt => Lit::Bool(lhs < rhs),
 						Cmp::Le => Lit::Bool(lhs <= rhs),
 						Cmp::EqEq => Lit::Bool((lhs - rhs).abs() < f64::EPSILON),
@@ -35,7 +45,11 @@ impl Expr {
 						Cmp::Ge => Lit::Bool(lhs >= rhs),
 						Cmp::Gt => Lit::Bool(lhs > rhs),
 					},
-					(ExprOp::Cmp(op), Lit::String(lhs), Lit::String(rhs)) => match op {
+					(
+						ExprOp::Cmp(op),
+						Value::Lit(Lit::String(lhs)),
+						Value::Lit(Lit::String(rhs)),
+					) => match op {
 						Cmp::Lt => Lit::Bool(lhs < rhs),
 						Cmp::Le => Lit::Bool(lhs <= rhs),
 						Cmp::EqEq => Lit::Bool(lhs == rhs),
@@ -43,7 +57,11 @@ impl Expr {
 						Cmp::Ge => Lit::Bool(lhs >= rhs),
 						Cmp::Gt => Lit::Bool(lhs > rhs),
 					},
-					(ExprOp::BoolOp(op), Lit::Bool(lhs), Lit::Bool(rhs)) => match op {
+					(
+						ExprOp::BoolOp(op),
+						Value::Lit(Lit::Bool(lhs)),
+						Value::Lit(Lit::Bool(rhs)),
+					) => match op {
 						BoolOp::And => Lit::Bool(*lhs && *rhs),
 						BoolOp::Or => Lit::Bool(*lhs || *rhs),
 					},
@@ -52,6 +70,7 @@ impl Expr {
 					}
 				}
 			}
-		})
+		}
+		.into())
 	}
 }

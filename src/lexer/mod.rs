@@ -5,6 +5,21 @@ mod util;
 
 use crate::Error;
 
+#[macro_export]
+macro_rules! expect {
+	($tokens:ident, [$($kind:pat => $value:expr),*]) => {
+		{
+			use $crate::lexer::token::TokenKind::*;
+
+			match $tokens.next() {
+				#[allow(clippy::unnested_or_patterns, unused_parens)]
+				Some(t @ $crate::lexer::token::Token { kind: ($($kind)|*), .. }) => t,
+				other => return Err(ParseError::expected(vec![$($value),*], other.map(|o| o.kind))),
+			}
+		}
+	};
+}
+
 pub trait Decode {
 	type Error;
 

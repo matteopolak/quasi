@@ -1,6 +1,7 @@
 use std::{fmt, io};
 
 use crate::{
+	executor::scope::Value,
 	lexer::{Ident, Lit, Token, TokenKind},
 	parser::{expr::ExprOp, TokenStream},
 	span::Span,
@@ -126,8 +127,8 @@ impl ParseError {
 #[derive(Debug)]
 pub enum RuntimeError {
 	UnknownVariable(Ident),
-	InvalidOperation { op: ExprOp, lhs: Lit, rhs: Lit },
-	InvalidCondition { cond: Lit },
+	InvalidOperation { op: ExprOp, lhs: Value, rhs: Value },
+	InvalidCondition { cond: Value },
 }
 
 impl fmt::Display for RuntimeError {

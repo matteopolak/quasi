@@ -1,10 +1,11 @@
 use crate::{
 	error::ParseError,
+	expect,
 	lexer::{Ident, TokenKind},
 	parser::{Expr, Parse, TokenStream},
 };
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Reassign {
 	pub ident: Ident,
 	pub value: Expr,
@@ -34,24 +35,11 @@ impl Parse for Reassign {
 			}
 		};
 
-		let Some(token) = tokens.next() else {
-			return Err(ParseError::expected(vec![TokenKind::Eq], None));
-		};
-
-		match token.kind {
-			TokenKind::Eq => (),
-			other => return Err(ParseError::expected(vec![TokenKind::Eq], Some(other))),
-		};
+		expect!(tokens, [Eq => Eq]);
 
 		let value = Expr::parse(tokens)?;
-		let Some(last) = tokens.next() else {
-			return Err(ParseError::expected(vec![TokenKind::Semi], None));
-		};
 
-		match last.kind {
-			TokenKind::Semi => (),
-			other => return Err(ParseError::expected(vec![TokenKind::Semi], Some(other))),
-		};
+		expect!(tokens, [Semi => Semi]);
 
 		Ok(Self { ident, value })
 	}

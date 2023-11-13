@@ -17,8 +17,10 @@ use crate::{
 	Error,
 };
 
+use self::scope::Value;
+
 pub struct Executor {
-	instructions: Vec<Instruction>,
+	pub instructions: Vec<Instruction>,
 }
 
 impl FromIterator<Instruction> for Executor {
@@ -40,7 +42,8 @@ impl Executor {
 		Ok(())
 	}
 
-	fn _execute<'a>(
+	#[allow(clippy::too_many_lines)]
+	pub fn _execute<'a>(
 		out: &mut impl Write,
 		instructions: &[Instruction],
 		mut scope: Scope<'a>,
@@ -68,7 +71,7 @@ impl Executor {
 						.map_err(|e| e.with_span(span.clone()))?;
 
 					let cond = match cond {
-						Lit::Bool(b) => b,
+						Value::Lit(Lit::Bool(b)) => b,
 						other => {
 							return Err(error::RuntimeError::InvalidCondition { cond: other }
 								.with_span(span.clone()));
@@ -90,9 +93,10 @@ impl Executor {
 					.resolve(&scope)
 					.map_err(|e| e.with_span(span.clone()))?
 				{
-					Lit::Number(n) => writeln!(out, "{n}")?,
-					Lit::String(s) => writeln!(out, "{s}")?,
-					Lit::Bool(b) => writeln!(out, "{b}")?,
+					Value::Lit(Lit::Number(n)) => writeln!(out, "{n}")?,
+					Value::Lit(Lit::String(s)) => writeln!(out, "{s}")?,
+					Value::Lit(Lit::Bool(b)) => writeln!(out, "{b}")?,
+					Value::Fn(fu) => writeln!(out, "{fu}")?,
 				},
 				Instruction {
 					kind: InstructionKind::Reassign(Reassign { ident, value }),
@@ -119,7 +123,7 @@ impl Executor {
 					};
 
 					let mut cond = match cond_lit {
-						Lit::Bool(b) => b,
+						Value::Lit(Lit::Bool(b)) => b,
 						other => {
 							return Err(error::RuntimeError::InvalidCondition { cond: other }
 								.with_span(span.clone()));
@@ -140,11 +144,64 @@ impl Executor {
 						};
 
 						cond = match cond_lit {
-							Lit::Bool(b) => b,
+							Value::Lit(Lit::Bool(b)) => b,
 							other => {
 								return Err(error::RuntimeError::InvalidCondition { cond: other }
 									.with_span(span.clone()));
 							}
+						};
+					}
+
+					scope = child_scope.close();
+				}
+				Instruction {
+					kind: InstructionKind::FnCall(call),
+					span,
+				} => {
+					let mut child_scope = Scope::with_parent(scope);
+
+					child_scope = call.execute(child_scope, out, span)?;
+					scope = child_scope.close();
+				}
+				Instruction {
+					kind: InstructionKind::Fn(fu),
+					..
+				} => {
+					let value = Value::from(fu.clone());
+
+					scope.set(fu.name.clone(), value);
+				}
+				Instruction {
+					kind: InstructionKind::For(r#for),
+					span,
+				} => {
+					let mut child_scope = Scope::with_parent(scope);
+
+					child_scope = Self::_execute(out, &[*r#for.setup.clone()], child_scope)?;
+
+					let mut cond = match r#for.cond.resolve(&child_scope) {
+						Ok(Value::Lit(Lit::Bool(cond))) => cond,
+						Ok(other) => {
+							return Err(error::RuntimeError::InvalidCondition { cond: other }
+								.with_span(span.clone()));
+						}
+						Err(e) => return Err(e.with_span(span.clone())),
+					};
+
+					while cond {
+						let mut inner_scope = Scope::with_parent(child_scope);
+
+						inner_scope = Self::_execute(out, &r#for.body.instructions, inner_scope)?;
+						child_scope = inner_scope.close();
+						child_scope = Self::_execute(out, &[*r#for.update.clone()], child_scope)?;
+
+						cond = match r#for.cond.resolve(&child_scope) {
+							Ok(Value::Lit(Lit::Bool(cond))) => cond,
+							Ok(other) => {
+								return Err(error::RuntimeError::InvalidCondition { cond: other }
+									.with_span(span.clone()));
+							}
+							Err(e) => return Err(e.with_span(span.clone())),
 						};
 					}
 

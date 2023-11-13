@@ -24,6 +24,8 @@ pub enum TokenKind {
 	Whitespace,
 	/// `;`
 	Semi,
+	/// `,`
+	Comma,
 	/// `{`
 	OpenDelim(Delim),
 	/// `}`
@@ -118,6 +120,7 @@ impl fmt::Display for TokenKind {
 			Self::Keyword(kw) => kw.fmt(f),
 			Self::Ident(_) => write!(f, "{{ident}}"),
 			Self::Semi => write!(f, ";"),
+			Self::Comma => write!(f, ","),
 			Self::OpenDelim(d) => match d {
 				Delim::Paren => write!(f, "("),
 				Delim::Brace => write!(f, "{{"),
@@ -353,6 +356,8 @@ pub enum Symbol {
 	Print,
 	Else,
 	While,
+	Fn,
+	For,
 }
 
 impl fmt::Display for Symbol {
@@ -363,6 +368,8 @@ impl fmt::Display for Symbol {
 			Self::Print => write!(f, "print"),
 			Self::Else => write!(f, "else"),
 			Self::While => write!(f, "while"),
+			Self::Fn => write!(f, "fn"),
+			Self::For => write!(f, "for"),
 		}
 	}
 }
@@ -377,6 +384,8 @@ impl Decode for Symbol {
 			[b'p', b'r', b'i', b'n', b't', r @ ..] if is_whitespace(r) => (Self::Print, r),
 			[b'e', b'l', b's', b'e', r @ ..] if is_gap(r) => (Self::Else, r),
 			[b'w', b'h', b'i', b'l', b'e', r @ ..] if is_whitespace(r) => (Self::While, r),
+			[b'f', b'n', r @ ..] if is_whitespace(r) => (Self::Fn, r),
+			[b'f', b'o', b'r', r @ ..] if is_whitespace(r) => (Self::For, r),
 			_ => return Ok((None, input)),
 		};
 
@@ -385,7 +394,7 @@ impl Decode for Symbol {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Default)]
-pub struct Ident(String);
+pub struct Ident(pub String);
 
 impl Ident {
 	pub fn new(s: &str) -> Self {
@@ -508,6 +517,7 @@ impl Decode for TokenKind {
 			[b']', r @ ..] => (Self::CloseDelim(Delim::Bracket), r),
 			[b'&', b'&', r @ ..] => (Self::BoolOp(BoolOp::And), r),
 			[b'|', b'|', r @ ..] => (Self::BoolOp(BoolOp::Or), r),
+			[b',', r @ ..] => (Self::Comma, r),
 			_ => {
 				if let Ok((Some(t), r)) = Op::decode(input) {
 					return Ok((Some(Self::Op(t)), r));

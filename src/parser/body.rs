@@ -5,7 +5,7 @@ use crate::{
 
 use super::{instruction::Instruction, Parse, TokenStream};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Body {
 	pub instructions: Vec<Instruction>,
 }
@@ -38,6 +38,8 @@ impl Parse for Body {
 
 		while let Some(Token { kind: token, .. }) = tokens.peek() {
 			if let TokenKind::CloseDelim(Delim::Bracket) = token {
+				tokens.next();
+
 				break;
 			}
 

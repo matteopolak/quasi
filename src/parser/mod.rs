@@ -42,6 +42,10 @@ impl TokenStream {
 		self.tokens.get(0)
 	}
 
+	pub fn nth(&self, n: usize) -> Option<&Token> {
+		self.tokens.get(n)
+	}
+
 	pub fn next(&mut self) -> Option<Token> {
 		let next = self.tokens.pop_front();
 
@@ -52,6 +56,12 @@ impl TokenStream {
 		self.offset += 1;
 		self.skip_whitespace();
 		next
+	}
+
+	pub fn ret(&mut self, token: Token) {
+		self.tokens.push_front(token);
+		self.offset -= 1;
+		self.skip_whitespace();
 	}
 
 	pub fn skip_whitespace(&mut self) {

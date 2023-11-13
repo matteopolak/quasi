@@ -1,10 +1,11 @@
 use crate::{
 	error::ParseError,
+	expect,
 	lexer::{Symbol, Token, TokenKind},
 	parser::{body::Body, Expr, Parse, TokenStream},
 };
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct If {
 	pub cond: Expr,
 	pub body: Box<Body>,
@@ -16,15 +17,7 @@ impl Parse for If {
 	where
 		Self: Sized,
 	{
-		match tokens.next().map(|t| t.kind) {
-			Some(TokenKind::Keyword(Symbol::If)) => (),
-			other => {
-				return Err(ParseError::expected(
-					vec![TokenKind::Keyword(Symbol::If)],
-					other,
-				))
-			}
-		};
+		expect!(tokens, [Keyword(Symbol::If) => Keyword(Symbol::If)]);
 
 		let cond = Expr::parse(tokens)?;
 		let body = Body::parse(tokens)?;
