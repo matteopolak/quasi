@@ -2,6 +2,9 @@
 
 Quasi (*/ˈkwāˌzī/*) is an interpreted programming language that's designed to be largely similar to most languages, but with slightly off-putting syntactical differences.
 
+[![Lint status](https://github.com/matteopolak/quasi/workflows/lint/badge.svg)](https://github.com/matteopolak/quasi/actions)
+[![Test status](https://github.com/matteopolak/quasi/workflows/test/badge.svg)](https://github.com/matteopolak/quasi/actions)
+
 ## Quick links
 
 - [Installation](#installation)
