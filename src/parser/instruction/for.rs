@@ -23,8 +23,6 @@ impl Parse for For {
 		expect!(tokens, [Keyword(Symbol::For) => Keyword(Symbol::For)]);
 
 		let setup = Instruction::parse(tokens)?;
-		expect!(tokens, [Semi => Semi]);
-
 		let cond = Expr::parse(tokens)?;
 		expect!(tokens, [Semi => Semi]);
 

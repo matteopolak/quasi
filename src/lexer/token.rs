@@ -413,13 +413,13 @@ impl Decode for Ident {
 
 	fn decode(input: &[u8]) -> Result<(Option<Ident>, &[u8]), Self::Error> {
 		let (t, r) = match input {
-			[c @ (b'a'..=b'z' | b'A'..=b'Z'), r @ ..] => {
+			[c @ (b'a'..=b'z' | b'A'..=b'Z' | b'_'), r @ ..] => {
 				let mut s = String::from(*c as char);
 				let mut r = r;
 
 				while !r.is_empty() {
 					let (c, rr) = match r {
-						[c @ (b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9'), rr @ ..] => (*c, rr),
+						[c @ (b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'_'), rr @ ..] => (*c, rr),
 						_ => break,
 					};
 

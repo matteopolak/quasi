@@ -14,6 +14,7 @@ Quasi (*/ˈkwāˌzī/*) is an interpreted programming language that's designed t
   - [Comments](#comments)
   - [Variables](#variables)
   - [Control flow](#control-flow)
+  - [Functions](#functions)
 
 ## Installation
 
@@ -80,4 +81,25 @@ while x < 10 [
   print x;
   x = x + 1;
 ]
+```
+
+```rust
+for let i = 0; i < 10; i = i + 1; [
+  print i;
+]
+```
+
+### Functions
+
+```rust
+fn is_even(a) [
+  if a % 2 == 0 [
+    print "even";
+  ] else [
+    print "odd";
+  ]
+]
+
+is_even(10); # even
+is_even(15); # odd
 ```
