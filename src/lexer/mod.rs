@@ -80,23 +80,33 @@ pub fn tokenize(input: &[u8]) -> Tokenize {
 mod test {
 	use super::*;
 
+	fn parse(input: &[u8]) -> Vec<TokenKind> {
+		let tokens = tokenize(input)
+			.map(|t| t.map(|t| t.kind))
+			.collect::<Result<Vec<_>, _>>();
+
+		assert!(tokens.is_ok(), "{:?}", tokens);
+
+		tokens.unwrap()
+	}
+
 	#[test]
 	fn tokenize_expr() {
 		let input = b"1 + 2 * 3";
-		let tokens = tokenize(input).collect::<Result<Vec<_>, _>>().unwrap();
+		let tokens = parse(input);
 
 		assert_eq!(
 			tokens,
 			vec![
-				Token::new(TokenKind::Literal(Lit::Number(1.)), 0..1),
-				Token::WHITESPACE,
-				Token::new(TokenKind::Op(Op::Add), 2..3),
-				Token::WHITESPACE,
-				Token::new(TokenKind::Literal(Lit::Number(2.)), 4..5),
-				Token::WHITESPACE,
-				Token::new(TokenKind::Op(Op::Mul), 6..7),
-				Token::WHITESPACE,
-				Token::new(TokenKind::Literal(Lit::Number(3.)), 8..9),
+				TokenKind::Literal(Lit::Number(1.)),
+				TokenKind::Whitespace,
+				TokenKind::Op(Op::Add),
+				TokenKind::Whitespace,
+				TokenKind::Literal(Lit::Number(2.)),
+				TokenKind::Whitespace,
+				TokenKind::Op(Op::Mul),
+				TokenKind::Whitespace,
+				TokenKind::Literal(Lit::Number(3.)),
 			]
 		);
 	}
@@ -104,19 +114,20 @@ mod test {
 	#[test]
 	fn tokenize_comments() {
 		let input = b"1 + 2 # This is a comment\n* 3";
-		let tokens = tokenize(input).collect::<Result<Vec<_>, _>>().unwrap();
+		let tokens = parse(input);
 
 		assert_eq!(
 			tokens,
 			vec![
-				Token::new(TokenKind::Literal(Lit::Number(1.)), 0..1),
-				Token::WHITESPACE,
-				Token::new(TokenKind::Op(Op::Add), 2..3),
-				Token::WHITESPACE,
-				Token::new(TokenKind::Literal(Lit::Number(2.)), 4..5),
-				Token::new(TokenKind::Op(Op::Mul), 22..23),
-				Token::WHITESPACE,
-				Token::new(TokenKind::Literal(Lit::Number(3.)), 24..25),
+				TokenKind::Literal(Lit::Number(1.)),
+				TokenKind::Whitespace,
+				TokenKind::Op(Op::Add),
+				TokenKind::Whitespace,
+				TokenKind::Literal(Lit::Number(2.)),
+				TokenKind::Whitespace,
+				TokenKind::Op(Op::Mul),
+				TokenKind::Whitespace,
+				TokenKind::Literal(Lit::Number(3.)),
 			]
 		);
 	}
@@ -124,24 +135,24 @@ mod test {
 	#[test]
 	fn tokenize_while() {
 		let input = b"while 1 < 2 { 3 }";
-		let tokens = tokenize(input).collect::<Result<Vec<_>, _>>().unwrap();
+		let tokens = parse(input);
 
 		assert_eq!(
 			tokens,
 			vec![
-				Token::new(TokenKind::Keyword(Symbol::While), 0..5),
-				Token::WHITESPACE,
-				Token::new(TokenKind::Literal(Lit::Number(1.)), 6..7),
-				Token::WHITESPACE,
-				Token::new(TokenKind::Cmp(Cmp::Lt), 8..9),
-				Token::WHITESPACE,
-				Token::new(TokenKind::Literal(Lit::Number(2.)), 10..11),
-				Token::WHITESPACE,
-				Token::new(TokenKind::OpenDelim(Delim::Brace), 12..13),
-				Token::WHITESPACE,
-				Token::new(TokenKind::Literal(Lit::Number(3.)), 14..15),
-				Token::WHITESPACE,
-				Token::new(TokenKind::CloseDelim(Delim::Brace), 16..17),
+				TokenKind::Keyword(Symbol::While),
+				TokenKind::Whitespace,
+				TokenKind::Literal(Lit::Number(1.)),
+				TokenKind::Whitespace,
+				TokenKind::Cmp(Cmp::Lt),
+				TokenKind::Whitespace,
+				TokenKind::Literal(Lit::Number(2.)),
+				TokenKind::Whitespace,
+				TokenKind::OpenDelim(Delim::Brace),
+				TokenKind::Whitespace,
+				TokenKind::Literal(Lit::Number(3.)),
+				TokenKind::Whitespace,
+				TokenKind::CloseDelim(Delim::Brace),
 			]
 		);
 	}

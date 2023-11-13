@@ -7,7 +7,7 @@ use crate::{
 
 use super::{body::Body, Parse, TokenStream};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Instruction {
 	pub kind: InstructionKind,
 	pub span: Span,
@@ -23,7 +23,7 @@ impl Instruction {
 	}
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum InstructionKind {
 	Assign {
 		ident: Ident,

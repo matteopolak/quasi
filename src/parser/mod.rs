@@ -131,3 +131,101 @@ impl Iterator for Instructionify {
 pub fn instructionify(tokens: TokenStream) -> Instructionify {
 	Instructionify::new(tokens)
 }
+
+#[cfg(test)]
+mod test {
+	use crate::{
+		lexer::{Cmp, Delim, Ident, Lit, Symbol},
+		parser::{body::Body, expr::ExprOp, instruction::InstructionKind},
+	};
+
+	use super::*;
+
+	fn parse(stream: TokenStream) -> Vec<InstructionKind> {
+		let instructions = instructionify(stream)
+			.map(|i| i.map(|i| i.kind))
+			.collect::<Result<Vec<_>, _>>();
+
+		assert!(instructions.is_ok());
+
+		instructions.unwrap()
+	}
+
+	#[test]
+	fn test_assign() {
+		let tokens = TokenStream::new(
+			vec![
+				Token::new(TokenKind::Keyword(Symbol::Let), 0..3),
+				Token::new(TokenKind::Ident(Ident::new("a")), 0..1),
+				Token::new(TokenKind::Eq, 1..2),
+				Token::new(TokenKind::Literal(Lit::Number(1.)), 2..3),
+				Token::new(TokenKind::Semi, 3..4),
+			]
+			.into(),
+		);
+
+		let result = parse(tokens);
+
+		assert_eq!(
+			result,
+			vec![InstructionKind::Assign {
+				ident: Ident::new("a"),
+				value: Expr::Lit(Lit::Number(1.)),
+			}],
+		);
+	}
+
+	#[test]
+	fn test_reassign() {
+		let tokens = TokenStream::new(
+			vec![
+				Token::new(TokenKind::Ident(Ident::new("a")), 0..1),
+				Token::new(TokenKind::Eq, 1..2),
+				Token::new(TokenKind::Literal(Lit::Number(1.)), 2..3),
+				Token::new(TokenKind::Semi, 3..4),
+			]
+			.into(),
+		);
+
+		let result = parse(tokens);
+
+		assert_eq!(
+			result,
+			vec![InstructionKind::Reassign {
+				ident: Ident::new("a"),
+				value: Expr::Lit(Lit::Number(1.)),
+			}],
+		);
+	}
+
+	#[test]
+	fn test_while() {
+		let tokens = TokenStream::new(
+			vec![
+				Token::new(TokenKind::Keyword(Symbol::While), 0..5),
+				Token::new(TokenKind::Literal(Lit::Number(1.)), 5..6),
+				Token::new(TokenKind::Cmp(Cmp::Lt), 6..7),
+				Token::new(TokenKind::Literal(Lit::Number(2.)), 7..8),
+				Token::new(TokenKind::OpenDelim(Delim::Bracket), 8..9),
+				Token::new(TokenKind::CloseDelim(Delim::Bracket), 10..11),
+			]
+			.into(),
+		);
+
+		let result = parse(tokens);
+
+		assert_eq!(
+			result,
+			vec![InstructionKind::While {
+				cond: Expr::Op {
+					op: ExprOp::Cmp(Cmp::Lt),
+					lhs: Box::new(Expr::Lit(Lit::Number(1.))),
+					rhs: Box::new(Expr::Lit(Lit::Number(2.))),
+				},
+				body: Box::new(Body {
+					instructions: vec![]
+				}),
+			}],
+		);
+	}
+}

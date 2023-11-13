@@ -5,7 +5,7 @@ use crate::{
 
 use super::{instruction::Instruction, Parse, TokenStream};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Body {
 	pub instructions: Vec<Instruction>,
 }

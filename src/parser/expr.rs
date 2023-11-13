@@ -5,7 +5,7 @@ use crate::{
 
 use super::{Parse, TokenStream};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Expr {
 	Lit(Lit),
 	Ident(Ident),
