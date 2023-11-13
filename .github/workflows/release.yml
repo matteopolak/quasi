@@ -81,7 +81,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release --features runtime_env
+          args: --release
       - name: Move release files
         run: |
           mkdir release
