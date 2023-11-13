@@ -64,17 +64,17 @@ let z = x + y;
 ### Control flow
 
 ```rust
-if x == 1 {
+if x == 1 [
   print "x is 1";
-} else if x == 2 {
+] else if x == 2 [
   print "x is 2";
-} else
+] else
   print "x is neither 1 nor 2";
 ```
 
 ```rust
-while x < 10 {
+while x < 10 [
   print x;
   x = x + 1;
-}
+]
 ```
