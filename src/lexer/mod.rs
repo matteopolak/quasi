@@ -75,3 +75,74 @@ impl Iterator for Tokenize<'_> {
 pub fn tokenize(input: &[u8]) -> Tokenize {
 	Tokenize::new(input)
 }
+
+#[cfg(test)]
+mod test {
+	use super::*;
+
+	#[test]
+	fn tokenize_expr() {
+		let input = b"1 + 2 * 3";
+		let tokens = tokenize(input).collect::<Result<Vec<_>, _>>().unwrap();
+
+		assert_eq!(
+			tokens,
+			vec![
+				Token::new(TokenKind::Literal(Lit::Number(1.)), 0..1),
+				Token::WHITESPACE,
+				Token::new(TokenKind::Op(Op::Add), 2..3),
+				Token::WHITESPACE,
+				Token::new(TokenKind::Literal(Lit::Number(2.)), 4..5),
+				Token::WHITESPACE,
+				Token::new(TokenKind::Op(Op::Mul), 6..7),
+				Token::WHITESPACE,
+				Token::new(TokenKind::Literal(Lit::Number(3.)), 8..9),
+			]
+		);
+	}
+
+	#[test]
+	fn tokenize_comments() {
+		let input = b"1 + 2 # This is a comment\n* 3";
+		let tokens = tokenize(input).collect::<Result<Vec<_>, _>>().unwrap();
+
+		assert_eq!(
+			tokens,
+			vec![
+				Token::new(TokenKind::Literal(Lit::Number(1.)), 0..1),
+				Token::WHITESPACE,
+				Token::new(TokenKind::Op(Op::Add), 2..3),
+				Token::WHITESPACE,
+				Token::new(TokenKind::Literal(Lit::Number(2.)), 4..5),
+				Token::new(TokenKind::Op(Op::Mul), 22..23),
+				Token::WHITESPACE,
+				Token::new(TokenKind::Literal(Lit::Number(3.)), 24..25),
+			]
+		);
+	}
+
+	#[test]
+	fn tokenize_while() {
+		let input = b"while 1 < 2 { 3 }";
+		let tokens = tokenize(input).collect::<Result<Vec<_>, _>>().unwrap();
+
+		assert_eq!(
+			tokens,
+			vec![
+				Token::new(TokenKind::Keyword(Symbol::While), 0..5),
+				Token::WHITESPACE,
+				Token::new(TokenKind::Literal(Lit::Number(1.)), 6..7),
+				Token::WHITESPACE,
+				Token::new(TokenKind::Cmp(Cmp::Lt), 8..9),
+				Token::WHITESPACE,
+				Token::new(TokenKind::Literal(Lit::Number(2.)), 10..11),
+				Token::WHITESPACE,
+				Token::new(TokenKind::OpenDelim(Delim::Brace), 12..13),
+				Token::WHITESPACE,
+				Token::new(TokenKind::Literal(Lit::Number(3.)), 14..15),
+				Token::WHITESPACE,
+				Token::new(TokenKind::CloseDelim(Delim::Brace), 16..17),
+			]
+		);
+	}
+}

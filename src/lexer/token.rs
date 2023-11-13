@@ -61,6 +61,18 @@ pub enum Delim {
 }
 
 impl Token {
+	pub const WHITESPACE: Token = Token {
+		kind: TokenKind::Whitespace,
+		span: Span::new(0..0),
+	};
+
+	pub fn new(kind: TokenKind, span: impl Into<Span>) -> Self {
+		Self {
+			kind,
+			span: span.into(),
+		}
+	}
+
 	pub fn is_whitespace(&self) -> bool {
 		matches!(self.kind, TokenKind::Whitespace)
 	}
@@ -263,8 +275,8 @@ impl Decode for Lit {
 					r,
 				)
 			}
-			[b't', b'r', b'u', b'e', n, r @ ..] if is_gap(*n) => (Self::Bool(true), r),
-			[b'f', b'a', b'l', b's', b'e', n, r @ ..] if is_gap(*n) => (Self::Bool(false), r),
+			[b't', b'r', b'u', b'e', r @ ..] if is_gap(r) => (Self::Bool(true), r),
+			[b'f', b'a', b'l', b's', b'e', r @ ..] if is_gap(r) => (Self::Bool(false), r),
 			_ => return Ok((None, input)),
 		};
 
@@ -361,11 +373,11 @@ impl Decode for Symbol {
 
 	fn decode(input: &[u8]) -> Result<(Option<Symbol>, &[u8]), Self::Error> {
 		let (t, r) = match input {
-			[b'l', b'e', b't', n, r @ ..] if is_whitespace(*n) => (Self::Let, r),
-			[b'i', b'f', n, r @ ..] if is_whitespace(*n) => (Self::If, r),
-			[b'p', b'r', b'i', b'n', b't', n, r @ ..] if is_whitespace(*n) => (Self::Print, r),
-			[b'e', b'l', b's', b'e', n, r @ ..] if is_gap(*n) => (Self::Else, r),
-			[b'w', b'h', b'i', b'l', b'e', n, r @ ..] if is_whitespace(*n) => (Self::While, r),
+			[b'l', b'e', b't', r @ ..] if is_whitespace(r) => (Self::Let, r),
+			[b'i', b'f', r @ ..] if is_whitespace(r) => (Self::If, r),
+			[b'p', b'r', b'i', b'n', b't', r @ ..] if is_whitespace(r) => (Self::Print, r),
+			[b'e', b'l', b's', b'e', r @ ..] if is_gap(r) => (Self::Else, r),
+			[b'w', b'h', b'i', b'l', b'e', r @ ..] if is_whitespace(r) => (Self::While, r),
 			_ => return Ok((None, input)),
 		};
 
@@ -375,6 +387,12 @@ impl Decode for Symbol {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Default)]
 pub struct Ident(String);
+
+impl Ident {
+	pub fn new(s: &str) -> Self {
+		Self(s.to_owned())
+	}
+}
 
 impl fmt::Display for Ident {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {

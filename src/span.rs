@@ -1,12 +1,18 @@
 use std::ops::Range;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Span {
 	range: Range<usize>,
 }
 
+impl From<Range<usize>> for Span {
+	fn from(range: Range<usize>) -> Self {
+		Self::new(range)
+	}
+}
+
 impl Span {
-	pub fn new(range: Range<usize>) -> Self {
+	pub const fn new(range: Range<usize>) -> Self {
 		Self { range }
 	}
 

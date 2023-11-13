@@ -6,6 +6,8 @@ use crate::{
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+	#[error("io error: {0}")]
+	Io(#[from] std::io::Error),
 	#[error("parse error: {source:?} at {span:?}")]
 	Parse { source: ParseError, span: Span },
 	#[error("runtime error: {source:?} at {span:?}")]
@@ -29,6 +31,7 @@ impl Error {
 				source,
 				span: span.offset(offset),
 			},
+			_ => self,
 		}
 	}
 
@@ -37,6 +40,7 @@ impl Error {
 			Self::Parse { span, .. } => span,
 			Self::Runtime { span, .. } => span,
 			Self::Lexer { span, .. } => span,
+			_ => unreachable!(),
 		}
 	}
 

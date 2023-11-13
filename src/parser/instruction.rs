@@ -13,6 +13,16 @@ pub struct Instruction {
 	pub span: Span,
 }
 
+impl Instruction {
+	#[cfg(test)]
+	pub fn new(kind: InstructionKind) -> Self {
+		Self {
+			kind,
+			span: Span::default(),
+		}
+	}
+}
+
 #[derive(Debug)]
 pub enum InstructionKind {
 	Assign {
