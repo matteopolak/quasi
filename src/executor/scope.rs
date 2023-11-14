@@ -60,7 +60,7 @@ impl Scope {
 
 		self.parent
 			.as_ref()
-			.ok_or_else(|| RuntimeError::UnknownVariable(ident.clone()))
+			.ok_or_else(|| RuntimeError::UnknownFunction(ident.clone()))
 			.and_then(|parent| parent.get_fn(ident))
 	}
 

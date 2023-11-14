@@ -140,6 +140,7 @@ impl ParseError {
 #[derive(Debug)]
 pub enum RuntimeError {
 	UnknownVariable(Ident),
+	UnknownFunction(Ident),
 	InvalidOperation {
 		op: ExprOp,
 		lhs: Option<Lit>,
@@ -161,6 +162,7 @@ pub enum RuntimeError {
 impl fmt::Display for RuntimeError {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		match self {
+			Self::UnknownFunction(ident) => write!(f, "unknown function `{ident}`"),
 			Self::UnknownVariable(ident) => write!(f, "unknown variable `{ident}`"),
 			Self::InvalidOperation { op, lhs, rhs } => {
 				if let Some(lhs) = lhs {
