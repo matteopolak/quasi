@@ -31,16 +31,11 @@ pub trait Decode {
 pub struct Tokenize<'i> {
 	input: &'i [u8],
 	offset: usize,
-	whitespace: bool,
 }
 
 impl<'i> Tokenize<'i> {
 	pub fn new(input: &'i [u8]) -> Self {
-		Self {
-			input,
-			offset: 0,
-			whitespace: false,
-		}
+		Self { input, offset: 0 }
 	}
 
 	pub fn skip_comments(&mut self) {
@@ -49,11 +44,11 @@ impl<'i> Tokenize<'i> {
 
 			// Skip while there are tokens and the token is not a newline
 			while let Some(t) = self.input.first() {
+				self.input = &self.input[1..];
+
 				if t == &b'\n' {
 					break;
 				}
-
-				self.input = &self.input[1..];
 			}
 		}
 	}
@@ -65,24 +60,20 @@ impl Iterator for Tokenize<'_> {
 	fn next(&mut self) -> Option<Self::Item> {
 		self.skip_comments();
 
-		let (token, r) = match Token::decode(self.input) {
+		let (mut token, r) = match Token::decode(self.input) {
 			Ok((token, r)) => (token, r),
 			Err(e) => {
 				return Some(Err(e.offset(self.offset)));
 			}
 		};
 
+		if let Some(t) = token {
+			token = Some(t.offset(self.offset));
+		}
+
 		self.offset += self.input.len() - r.len();
 		self.input = r;
 
-		// De-duplicate adjacent whitespace tokens
-		let whitespace = token.as_ref().is_some_and(Token::is_whitespace);
-
-		if self.whitespace && whitespace {
-			return self.next();
-		}
-
-		self.whitespace = whitespace;
 		token.map(Ok)
 	}
 }

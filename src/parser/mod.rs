@@ -34,8 +34,45 @@ impl TokenStream {
 			used: vec![],
 		};
 
+		ts.dedup_whitespace();
 		ts.skip_whitespace();
 		ts
+	}
+
+	/// Merges whitespace tokens into a single token
+	/// and preserves the span appropriately.
+	fn dedup_whitespace(&mut self) {
+		let mut tokens = VecDeque::new();
+		let mut last = None;
+
+		for token in self.tokens.drain(..) {
+			if let Some(Token {
+				kind: TokenKind::Whitespace,
+				..
+			}) = last
+			{
+				if let TokenKind::Whitespace = token.kind {
+					last = Some(Token {
+						kind: TokenKind::Whitespace,
+						span: last.unwrap().span.merge(&token.span),
+					});
+
+					continue;
+				}
+			}
+
+			if let Some(last) = last {
+				tokens.push_back(last);
+			}
+
+			last = Some(token);
+		}
+
+		if let Some(last) = last {
+			tokens.push_back(last);
+		}
+
+		self.tokens = tokens;
 	}
 
 	pub fn peek(&self) -> Option<&Token> {
@@ -50,17 +87,17 @@ impl TokenStream {
 		let next = self.tokens.pop_front();
 
 		if let Some(next) = next.clone() {
+			self.offset += next.span.len();
 			self.used.push(next);
 		}
 
-		self.offset += 1;
 		self.skip_whitespace();
 		next
 	}
 
 	pub fn ret(&mut self, token: Token) {
+		self.offset -= token.span.len();
 		self.tokens.push_front(token);
-		self.offset -= 1;
 		self.skip_whitespace();
 	}
 

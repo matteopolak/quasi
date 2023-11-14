@@ -1,4 +1,7 @@
-use std::{fmt, io};
+use std::{
+	fmt::{self, Display},
+	io,
+};
 
 use crate::{
 	executor::Scope,
@@ -85,6 +88,24 @@ pub enum ParseError {
 	},
 }
 
+fn pretty<T>(items: impl IntoIterator<Item = T>) -> String
+where
+	T: Display,
+{
+	let mut items = items.into_iter().peekable();
+	let mut string = String::new();
+
+	while let Some(item) = items.next() {
+		if items.peek().is_some() {
+			string.push_str(&format!("`{item}`, "));
+		} else {
+			string.push_str(&format!("or `{item}`"));
+		}
+	}
+
+	string
+}
+
 impl fmt::Display for ParseError {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		match self {
@@ -92,16 +113,8 @@ impl fmt::Display for ParseError {
 				if expected.len() == 1 {
 					write!(f, "expected `{}`, found `{}`", expected[0], found)
 				} else {
-					write!(
-						f,
-						"expected one of {}, found `{}`",
-						expected
-							.iter()
-							.map(|t| format!("`{t}`"))
-							.collect::<Vec<_>>()
-							.join(", "),
-						found
-					)
+					// Map to `_`, `_`, ..., or `_`
+					write!(f, "expected one of {}, found `{}`", pretty(expected), found)
 				}
 			}
 			Self::UnexpectedType { expected, found } => {

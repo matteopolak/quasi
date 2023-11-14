@@ -65,6 +65,11 @@ impl Token {
 		span: Span::new(0..0),
 	};
 
+	pub fn offset(mut self, offset: usize) -> Self {
+		self.span = self.span.offset(offset);
+		self
+	}
+
 	pub fn new(kind: TokenKind, span: impl Into<Span>) -> Self {
 		Self {
 			kind,

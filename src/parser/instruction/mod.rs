@@ -115,7 +115,6 @@ impl Parse for Instruction {
 				span,
 			}) => {
 				let start = span.clone();
-
 				tokens.next();
 
 				let value = Expr::parse(tokens)?;

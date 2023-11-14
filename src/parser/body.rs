@@ -1,5 +1,6 @@
 use crate::{
 	error::ParseError,
+	expect,
 	lexer::{Delim, Token, TokenKind},
 };
 
@@ -38,13 +39,13 @@ impl Parse for Body {
 
 		while let Some(Token { kind: token, .. }) = tokens.peek() {
 			if let TokenKind::CloseDelim(Delim::Bracket) = token {
-				tokens.next();
-
 				break;
 			}
 
 			instructions.push(Instruction::parse(tokens)?);
 		}
+
+		expect!(tokens, [CloseDelim(Delim::Bracket) => CloseDelim(Delim::Bracket)]);
 
 		Ok(Self { instructions })
 	}

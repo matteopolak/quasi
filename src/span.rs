@@ -16,49 +16,66 @@ impl Span {
 		Self { range }
 	}
 
-	/// Returns a range that captures the entire span and up to 3 lines before and after,
-	/// and the line number (not slice index) of the start and end of the range.
-	pub fn line_range(&self, input: &[u8]) -> (usize, usize, Range<usize>) {
+	pub fn len(&self) -> usize {
+		self.range.len()
+	}
+
+	pub fn merge(&self, other: &Self) -> Self {
+		Self {
+			range: self.range.start.min(other.range.start)..self.range.end.max(other.range.end),
+		}
+	}
+
+	pub fn line_start(&self, input: &[u8]) -> usize {
+		bytecount::count(&input[..self.range.start], b'\n') + 1
+	}
+
+	pub fn line_end(&self, input: &[u8]) -> usize {
+		bytecount::count(&input[..self.range.end], b'\n') + 1
+	}
+
+	/// Creates a new span that extends the current one by `lines` lines
+	/// in both directions.
+	pub fn expand(&self, input: &[u8], lines: usize) -> Self {
+		if input.is_empty() {
+			return self.clone();
+		}
+
 		let mut start = self.range.start;
 		let mut end = self.range.end;
 
-		// find the start of the line
-		while start > 0 && input[start - 1] != b'\n' {
-			start -= 1;
+		for _ in 0..lines {
+			while start > 0 && input[start - 1] != b'\n' {
+				start -= 1;
+			}
+
+			start = start.saturating_sub(1);
 		}
 
-		// find the end of the line
-		while end < input.len() && input[end] != b'\n' {
-			end += 1;
+		for _ in 0..lines {
+			while end < input.len() && input[end] != b'\n' {
+				end += 1;
+			}
+
+			if end < input.len() {
+				end += 1;
+			}
 		}
 
-		// find the start of the range
-		let mut range_start = start;
-		while range_start > 0 && input[range_start - 1] != b'\n' {
-			range_start -= 1;
-		}
-
-		// find the end of the range
-		let mut range_end = end;
-		while range_end < input.len() && input[range_end] != b'\n' {
-			range_end += 1;
-		}
-
-		let line = bytecount::count(&input[..start], b'\n') + 1;
-		let line_end = bytecount::count(&input[start..end], b'\n') + line;
-
-		(line, line_end, range_start..range_end)
+		Self { range: start..end }
 	}
 
 	pub fn highlight(&self, input: &[u8]) -> String {
 		let mut output = String::new();
-		let (mut line, line_end, range) = self.line_range(input);
+		let lines = self.expand(input, 2);
+		let (mut line, line_end) = (lines.line_start(input), lines.line_end(input));
+
 		let number_length = line_end.to_string().len();
 
 		output.push_str(&format!("{line: >number_length$}"));
 		output.push_str(" | ");
 
-		for c in &input[range] {
+		for c in &input[lines.range] {
 			if *c == b'\n' {
 				line += 1;
 
