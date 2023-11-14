@@ -28,7 +28,6 @@ fn wrap(input: &[u8]) -> Result<(), Error> {
 	let tokens = lexer::tokenize(input).collect::<Result<_, _>>()?;
 	let stream = parser::instructionify(tokens);
 	let mut executor = stream.collect::<Result<executor::Executor, _>>()?;
-	println!("{:#?}", executor.instructions);
 
 	executor.execute(&mut io::stdout())?;
 
