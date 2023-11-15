@@ -1,0 +1,16 @@
+[package]
+name = "wasm"
+version = "0.1.0"
+edition = "2021"
+authors = ["Matthew Polak <me@matteopolak.com>"]
+description = "Wasm support for Quasi"
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+quasi.path = "../quasi"
+wasm-bindgen = "0.2"
