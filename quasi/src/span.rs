@@ -20,6 +20,10 @@ impl Span {
 		self.range.len()
 	}
 
+	pub fn is_empty(&self) -> bool {
+		self.range.is_empty()
+	}
+
 	pub fn merge(&self, other: &Self) -> Self {
 		Self {
 			range: self.range.start.min(other.range.start)..self.range.end.max(other.range.end),

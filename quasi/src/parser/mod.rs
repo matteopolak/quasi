@@ -83,18 +83,6 @@ impl TokenStream {
 		self.tokens.get(n)
 	}
 
-	pub fn next(&mut self) -> Option<Token> {
-		let next = self.tokens.pop_front();
-
-		if let Some(next) = next.clone() {
-			self.offset += next.span.len();
-			self.used.push(next);
-		}
-
-		self.skip_whitespace();
-		next
-	}
-
 	pub fn ret(&mut self, token: Token) {
 		self.offset -= token.span.len();
 		self.tokens.push_front(token);
@@ -136,7 +124,15 @@ impl Iterator for TokenStream {
 	type Item = Token;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		TokenStream::next(self)
+		let next = self.tokens.pop_front();
+
+		if let Some(next) = next.clone() {
+			self.offset += next.span.len();
+			self.used.push(next);
+		}
+
+		self.skip_whitespace();
+		next
 	}
 }
 

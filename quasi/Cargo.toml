@@ -1,0 +1,13 @@
+[package]
+name = "quasi"
+version = "0.2.0"
+edition = "2021"
+authors = ["Matthew Polak <me@matteopolak.com>"]
+description = "A slightly off-putting interpreted programming language."
+
+[dependencies]
+bytecount = "0.6"
+
+[dependencies.clap]
+version = "4"
+features = ["derive"]
