@@ -226,7 +226,7 @@ impl Executor {
 mod test {
 	use super::*;
 	use crate::{
-		lexer::{Cmp, Ident, Lit, Op},
+		lexer::{Cmp, Ident, Op},
 		parser::{body::Body, expr::ExprOp, Expr},
 		span::Span,
 	};

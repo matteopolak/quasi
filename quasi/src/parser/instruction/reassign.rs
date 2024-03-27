@@ -11,9 +11,22 @@ pub struct Reassign {
 	pub value: Expr,
 }
 
+pub struct ReassignParseOptions {
+	pub consume_semi: bool,
+}
+
 impl Parse for Reassign {
+	type Options = ReassignParseOptions;
+
 	/// Parses `<ident> = <expr>;`
 	fn parse(tokens: &mut TokenStream) -> Result<Self, ParseError>
+	where
+		Self: Sized,
+	{
+		Self::parse_with(tokens, ReassignParseOptions { consume_semi: true })
+	}
+
+	fn parse_with(tokens: &mut TokenStream, options: Self::Options) -> Result<Self, ParseError>
 	where
 		Self: Sized,
 	{
@@ -39,7 +52,9 @@ impl Parse for Reassign {
 
 		let value = Expr::parse(tokens)?;
 
-		expect!(tokens, [Semi => Semi]);
+		if options.consume_semi {
+			expect!(tokens, [Semi => Semi]);
+		}
 
 		Ok(Self { ident, value })
 	}

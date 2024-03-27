@@ -76,7 +76,7 @@ impl TokenStream {
 	}
 
 	pub fn peek(&self) -> Option<&Token> {
-		self.tokens.get(0)
+		self.tokens.front()
 	}
 
 	pub fn nth(&self, n: usize) -> Option<&Token> {
@@ -143,9 +143,19 @@ impl FromIterator<Token> for TokenStream {
 }
 
 pub trait Parse {
+	type Options = ();
+
 	fn parse(tokens: &mut TokenStream) -> Result<Self, ParseError>
 	where
 		Self: Sized;
+
+	#[allow(unused_variables)]
+	fn parse_with(tokens: &mut TokenStream, options: Self::Options) -> Result<Self, ParseError>
+	where
+		Self: Sized,
+	{
+		Self::parse(tokens)
+	}
 }
 
 pub struct Instructionify {

@@ -2,7 +2,7 @@ use crate::{
 	error::ParseError,
 	expect,
 	lexer::Symbol,
-	parser::{body::Body, Expr, Parse, TokenStream},
+	parser::{body::Body, instruction::InstructionParseOptions, Expr, Parse, TokenStream},
 };
 
 use super::Instruction;
@@ -26,7 +26,12 @@ impl Parse for For {
 		let cond = Expr::parse(tokens)?;
 		expect!(tokens, [Semi => Semi]);
 
-		let update = Instruction::parse(tokens)?;
+		let update = Instruction::parse_with(
+			tokens,
+			InstructionParseOptions {
+				consume_semi: false,
+			},
+		)?;
 		let body = Body::parse(tokens)?;
 
 		Ok(Self {
