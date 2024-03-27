@@ -63,30 +63,29 @@ impl Parse for Instruction {
 	where
 		Self: Sized,
 	{
-		Self::parse_with(tokens, InstructionParseOptions {
-			consume_semi: true,
-		})
+		Self::parse_with(tokens, InstructionParseOptions { consume_semi: true })
 	}
 
 	#[allow(clippy::too_many_lines)]
 	fn parse_with(tokens: &mut TokenStream, options: Self::Options) -> Result<Self, ParseError>
-		where
-			Self: Sized, {
-				Ok(match tokens.peek() {
+	where
+		Self: Sized,
+	{
+		Ok(match tokens.peek() {
 					Some(Token {
 						kind: TokenKind::Keyword(Symbol::Return),
 						span,
 					}) => {
 						let start = span.clone();
-		
+
 						tokens.next();
-		
+
 						let value = Expr::parse(tokens)?;
-		
+
 						if options.consume_semi {
 							expect!(tokens, [Semi => Semi]);
 						}
-		
+
 						Instruction {
 							span: start.to(&tokens.span()),
 							kind: InstructionKind::Return(value),
@@ -122,11 +121,11 @@ impl Parse for Instruction {
 							span: span.to(&tokens.span()),
 							kind: InstructionKind::FnCall(r#fn::FnCall::parse(tokens)?),
 						};
-		
+
 						if options.consume_semi {
 							expect!(tokens, [Semi => Semi]);
 						}
-		
+
 						i
 					},
 					Some(Token {
@@ -142,13 +141,13 @@ impl Parse for Instruction {
 					}) => {
 						let start = span.clone();
 						tokens.next();
-		
+
 						let value = Expr::parse(tokens)?;
-		
+
 						if options.consume_semi {
 							expect!(tokens, [Semi => Semi]);
 						}
-		
+
 						Instruction {
 							kind: InstructionKind::Print { value },
 							span: start.to(&tokens.span()),
