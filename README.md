@@ -101,3 +101,12 @@ fn is_even(a) [
 print is_even(10); # true
 print is_even(15); # false
 ```
+
+### Shadowing
+
+```rust
+let x = 1;
+let x = 2;
+
+print x; # 2
+```
