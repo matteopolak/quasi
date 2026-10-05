@@ -7,6 +7,7 @@ Quasi (*/ˈkwāˌzī/*) is an interpreted programming language that's designed t
 
 ## Quick links
 
+- [Try it in the browser](https://matteopolak.com/playground/quasi)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Examples](#examples)
